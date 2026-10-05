@@ -5,7 +5,7 @@ lua54 'yes'
 name        'dg-bridge'
 description 'DG Universal Bridge — Framework, Inventory, UI & more'
 author      'Greken'
-version     '1.1.0'
+version     '1.2.0'
 
 dependencies {
     '/onesync',

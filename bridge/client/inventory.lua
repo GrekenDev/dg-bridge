@@ -10,21 +10,25 @@
           For definitive checks, always use the server-side bridge functions.
 ]]
 
--- ─── ox_inventory ─────────────────────────────────────────────────────────────
-if Config.Inventory == 'ox_inventory' then
+-- ─── ox_inventory / dg_inventory ─────────────────────────────────────────────
+-- dg_inventory is a fork of ox_inventory with the same API, so both share one
+-- implementation and only the resource name differs.
+if Config.Inventory == 'ox_inventory' or Config.Inventory == 'dg_inventory' then
+    local inventory = exports[Config.Inventory]
+
     Bridge.hasItem = function(item, count)
         count = count or 1
-        local items = exports.ox_inventory:Search('count', item)
+        local items = inventory:Search('count', item)
         return (items or 0) >= count
     end
 
     Bridge.getItemCount = function(item)
-        return exports.ox_inventory:Search('count', item) or 0
+        return inventory:Search('count', item) or 0
     end
 
     Bridge.openInventory = function()
-        -- ox_inventory does not expose a client-side open export in all versions
-        TriggerEvent('ox_inventory:openInventory')
+        -- Not every version exposes a client-side open export
+        TriggerEvent(Config.Inventory .. ':openInventory')
     end
 
 -- ─── qb-inventory ─────────────────────────────────────────────────────────────

@@ -24,10 +24,39 @@
 
 local sm = Config.SocietyManagement
 
+-- ─── dg-banking ───────────────────────────────────────────────────────────────
+-- Development By Greken / DG. Job and gang accounts share one account registry
+-- keyed by the job or gang name, so both use the same three exports.
+if sm == 'dg-banking' then
+
+    Bridge.getSocietyMoney = function(job)
+        return exports['dg-banking']:GetAccountBalance(job) or 0
+    end
+
+    Bridge.addSocietyMoney = function(job, amount)
+        return exports['dg-banking']:AddAccountMoney(job, amount, 'dg-bridge') == true
+    end
+
+    Bridge.removeSocietyMoney = function(job, amount)
+        return exports['dg-banking']:RemoveAccountMoney(job, amount, 'dg-bridge') == true
+    end
+
+    Bridge.getGangMoney = function(gang)
+        return exports['dg-banking']:GetAccountBalance(gang) or 0
+    end
+
+    Bridge.addGangMoney = function(gang, amount)
+        return exports['dg-banking']:AddAccountMoney(gang, amount, 'dg-bridge') == true
+    end
+
+    Bridge.removeGangMoney = function(gang, amount)
+        return exports['dg-banking']:RemoveAccountMoney(gang, amount, 'dg-bridge') == true
+    end
+
 -- ─── Renewed-Banking ──────────────────────────────────────────────────────────
 -- https://renewed.dev/banking/exports
 -- Gangs use the same account API with the gang name as the account identifier.
-if sm == 'Renewed-Banking' then
+elseif sm == 'Renewed-Banking' then
 
     Bridge.getSocietyMoney = function(job)
         return exports['Renewed-Banking']:getAccountMoney(job) or 0

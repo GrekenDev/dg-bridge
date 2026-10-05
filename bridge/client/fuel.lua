@@ -11,14 +11,21 @@
 local fuel = Config.Fuel
 
 -- ─── ox_fuel ──────────────────────────────────────────────────────────────────
+-- ox_fuel exposes no GetFuel/SetFuel exports — its README states outright that
+-- the API is the entity statebag, and calling exports on it throws "No such
+-- export". Reading falls back to the native so a vehicle that ox_fuel has not
+-- touched yet still reports a sane level; writing mirrors what ox_fuel's own
+-- setFuel does: set the native, then the replicated statebag.
 if fuel == 'ox_fuel' then
 
     Bridge.getVehicleFuel = function(vehicle)
-        return exports.ox_fuel:GetFuel(vehicle) or 0.0
+        return Entity(vehicle).state.fuel or GetVehicleFuelLevel(vehicle) or 0.0
     end
 
     Bridge.setVehicleFuel = function(vehicle, amount)
-        exports.ox_fuel:SetFuel(vehicle, amount)
+        amount = math.max(0.0, math.min(100.0, (amount or 0) + 0.0))
+        SetVehicleFuelLevel(vehicle, amount)
+        Entity(vehicle).state:set('fuel', amount, true)
     end
 
 -- ─── LegacyFuel ───────────────────────────────────────────────────────────────

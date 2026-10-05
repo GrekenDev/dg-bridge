@@ -43,7 +43,7 @@ local function toOxGroups(opt)
     return groups
 end
 
--- Build ox_target targets list from unified options
+-- Build ox_target / i_interaction targets list from unified options
 local function toOxTargets(options, distance)
     local targets = {}
     for i, opt in ipairs(options) do
@@ -84,21 +84,47 @@ local function toQBOptions(options)
     return out
 end
 
--- ─── ox_target ───────────────────────────────────────────────────────────────
-if Config.Target == 'ox_target' then
+-- ─── ox_target / i_interaction ───────────────────────────────────────────────
+if Config.Target == 'ox_target' or Config.Target == 'i_interaction' then
+    local target = exports[Config.Target]
+
+    -- Both split entity targeting in two: addEntity/removeEntity take
+    -- NETWORK ids, while addLocalEntity/removeLocalEntity take entity handles.
+    -- Every other backend in this file takes a handle, and so does this API's
+    -- documented signature, so accept a handle and route it to whichever
+    -- function is right for that entity.
+    --
+    -- This matters because addEntity silently ignores anything that is not a
+    -- live network id — a locally created prop, or an entity handle passed
+    -- where a net id was expected, simply never gains an option.
+    local function netIdOf(entity)
+        if not entity or not DoesEntityExist(entity) then return nil end
+        if not NetworkGetEntityIsNetworked(entity) then return nil end
+
+        local netId = NetworkGetNetworkIdFromEntity(entity)
+        return (netId and netId ~= 0 and NetworkDoesNetworkIdExist(netId)) and netId or nil
+    end
+
     Bridge.addEntityTarget = function(entity, options, distance)
-        exports.ox_target:addEntity(entity, toOxTargets(options, distance))
+        local targets = toOxTargets(options, distance)
+        local netId   = netIdOf(entity)
+
+        if netId then
+            target:addEntity(netId, targets)
+        else
+            target:addLocalEntity(entity, targets)
+        end
     end
 
     Bridge.addModelTarget = function(models, options, distance)
         if type(models) == 'string' or type(models) == 'number' then
             models = { models }
         end
-        exports.ox_target:addModel(models, toOxTargets(options, distance))
+        target:addModel(models, toOxTargets(options, distance))
     end
 
     Bridge.addBoxZone = function(name, coords, width, length, heading, options, distance)
-        exports.ox_target:addBoxZone({
+        target:addBoxZone({
             name     = name,
             coords   = coords,
             size     = vec3(width, length, 2.0),
@@ -109,7 +135,7 @@ if Config.Target == 'ox_target' then
     end
 
     Bridge.addSphereZone = function(name, coords, radius, options, distance)
-        exports.ox_target:addSphereZone({
+        target:addSphereZone({
             name    = name,
             coords  = coords,
             radius  = radius or 1.5,
@@ -119,12 +145,18 @@ if Config.Target == 'ox_target' then
     end
 
     Bridge.removeZone = function(name)
-        exports.ox_target:removeZone(name)
+        target:removeZone(name)
     end
 
     Bridge.removeEntityTarget = function(entity, names)
         if type(names) == 'string' then names = { names } end
-        exports.ox_target:removeEntity(entity, names)
+
+        local netId = netIdOf(entity)
+        if netId then
+            target:removeEntity(netId, names)
+        else
+            target:removeLocalEntity(entity, names)
+        end
     end
 
 -- ─── qb-target ───────────────────────────────────────────────────────────────

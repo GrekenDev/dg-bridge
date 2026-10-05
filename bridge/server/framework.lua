@@ -773,3 +773,104 @@ else
     Bridge.addLicense    = function() end
     Bridge.removeLicense = function() end
 end
+
+-- ─────────────────────────────────────────────────────────────────────────────
+--  OFFLINE MONEY
+--
+--  Reads and writes a wallet belonging to a character who is not connected,
+--  addressed by identifier instead of by source. Needed by any script that has
+--  to pay or charge a player who happens to be offline — bank transfers,
+--  invoices, payouts.
+--
+--  Bridge.getOfflineMoney(identifier, account)                  → number
+--  Bridge.addOfflineMoney(identifier, account, amount, reason)  → bool
+--  Bridge.removeOfflineMoney(identifier, account, amount, reason) → bool
+--
+--  `account` is a canonical name ('cash', 'bank', 'black') and is mapped the
+--  same way as the online functions above.
+--
+--  Not every framework can do this. Where it is unsupported the functions
+--  return safe values (0 / false) and warn once, so callers can fall back
+--  instead of silently losing money.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+if Config.Framework == 'qbox' then
+    local _QBXOffline = exports.qbx_core
+
+    -- qbx_core's money functions accept a citizenid and handle the offline case
+    -- themselves, saving straight to storage.
+    Bridge.getOfflineMoney = function(identifier, account)
+        if not identifier then return 0 end
+
+        local amount = _QBXOffline:GetMoney(identifier, mapAccount(account or 'bank'))
+
+        return type(amount) == 'number' and amount or 0
+    end
+
+    Bridge.addOfflineMoney = function(identifier, account, amount, reason)
+        if not identifier or not amount or amount <= 0 then return false end
+
+        return _QBXOffline:AddMoney(identifier, mapAccount(account or 'bank'), amount, reason or 'dg-bridge') == true
+    end
+
+    Bridge.removeOfflineMoney = function(identifier, account, amount, reason)
+        if not identifier or not amount or amount <= 0 then return false end
+
+        return _QBXOffline:RemoveMoney(identifier, mapAccount(account or 'bank'), amount, reason or 'dg-bridge') == true
+    end
+
+elseif Config.Framework == 'qbcore' then
+    local _QBCoreOffline = exports['qb-core']:GetCoreObject()
+
+    local function offlinePlayer(identifier)
+        local ok, player = pcall(_QBCoreOffline.Functions.GetOfflinePlayerByCitizenId, identifier)
+        return ok and player or nil
+    end
+
+    Bridge.getOfflineMoney = function(identifier, account)
+        local player = offlinePlayer(identifier)
+        if not player then return 0 end
+
+        return player.PlayerData.money[mapAccount(account or 'bank')] or 0
+    end
+
+    Bridge.addOfflineMoney = function(identifier, account, amount, reason)
+        if not amount or amount <= 0 then return false end
+
+        local player = offlinePlayer(identifier)
+        if not player then return false end
+
+        local ok = pcall(player.Functions.AddMoney, mapAccount(account or 'bank'), amount, reason or 'dg-bridge')
+
+        return ok
+    end
+
+    Bridge.removeOfflineMoney = function(identifier, account, amount, reason)
+        if not amount or amount <= 0 then return false end
+
+        local player = offlinePlayer(identifier)
+        if not player then return false end
+
+        local wallet = mapAccount(account or 'bank')
+        if (player.PlayerData.money[wallet] or 0) < amount then return false end
+
+        local ok = pcall(player.Functions.RemoveMoney, wallet, amount, reason or 'dg-bridge')
+
+        return ok
+    end
+
+else
+    -- ESX, ND_Core and standalone have no supported offline wallet API.
+    local warned = false
+
+    local function warnOnce()
+        if warned then return end
+        warned = true
+        print('^3[dg-bridge] offline money is not supported for Config.Framework = "'
+            .. tostring(Config.Framework) .. '" — callers will fall back.^0')
+    end
+
+    Bridge.getOfflineMoney    = function() warnOnce() return 0 end
+    Bridge.addOfflineMoney    = function() warnOnce() return false end
+    Bridge.removeOfflineMoney = function() warnOnce() return false end
+end

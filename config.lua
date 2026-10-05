@@ -19,6 +19,7 @@ Config.Framework = 'qbox'
 --
 --  Options:
 --    'ox_inventory'    → ox_inventory  (overextended)
+--    'dg_inventory'    → dg_inventory  (ox_inventory fork, same API)
 --    'qb-inventory'    → qb-inventory  (QBCore built-in)
 --    'ps-inventory'    → ps-inventory  (project sloth)
 --    'codem-inventory' → codem-inventory
@@ -26,7 +27,7 @@ Config.Framework = 'qbox'
 --    'esx'             → es_extended built-in inventory
 --    'standalone'      → No inventory — item functions return safe fallbacks
 -- ─────────────────────────────────────────────────────────────────────────────
-Config.Inventory = 'ox_inventory'
+Config.Inventory = 'dg_inventory'
 
 -- ─────────────────────────────────────────────────────────────────────────────
 --  NOTIFICATIONS
@@ -107,11 +108,12 @@ Config.RadialMenu = 'ox_lib'
 --
 --  Options:
 --    'ox_target'  → ox_target
+--    'i_interaction' → i_interaction (ox_target compatible API)
 --    'qb-target'  → qb-target
 --    'qtarget'    → qtarget
 --    'standalone' → distance-based DrawText3D (no extra resource needed)
 -- ─────────────────────────────────────────────────────────────────────────────
-Config.Target = 'ox_target'
+Config.Target = 'i_interaction'
 
 -- ─────────────────────────────────────────────────────────────────────────────
 --  DISPATCH  (police/emergency alerts)
@@ -145,6 +147,7 @@ Config.MoneyAccounts = {
 --  This is used by Bridge.getSocietyMoney / addSocietyMoney / removeSocietyMoney.
 --
 --  Options:
+--    'dg-banking'      → dg-banking     (QBox / QBCore) — Development By Greken
 --    'Renewed-Banking' → Renewed-Banking (QBCore / QBox)
 --    'qb-management'   → qb-management  (QBCore)
 --    'esx_society'     → esx_society    (ESX)  — uses esx_addonaccount internally

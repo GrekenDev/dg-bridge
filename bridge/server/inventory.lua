@@ -13,51 +13,55 @@
     Bridge.openInventoryFor(source, targetSource)             → void
 ]]
 
--- ─── ox_inventory ─────────────────────────────────────────────────────────────
-if Config.Inventory == 'ox_inventory' then
+-- ─── ox_inventory / dg_inventory ─────────────────────────────────────────────
+-- dg_inventory is a fork of ox_inventory with the same API, so both share one
+-- implementation and only the resource name differs.
+if Config.Inventory == 'ox_inventory' or Config.Inventory == 'dg_inventory' then
+    local inventory = exports[Config.Inventory]
+
     Bridge.hasItem = function(source, item, count)
         count = count or 1
-        local result = exports.ox_inventory:Search(source, 'count', item)
+        local result = inventory:Search(source, 'count', item)
         return (result or 0) >= count
     end
 
     Bridge.getItemCount = function(source, item)
-        return exports.ox_inventory:Search(source, 'count', item) or 0
+        return inventory:Search(source, 'count', item) or 0
     end
 
     Bridge.getItem = function(source, item)
-        local result = exports.ox_inventory:Search(source, 'slots', item)
+        local result = inventory:Search(source, 'slots', item)
         return result and result[1] or nil
     end
 
     Bridge.getInventory = function(source)
-        return exports.ox_inventory:GetInventoryItems(source) or {}
+        return inventory:GetInventoryItems(source) or {}
     end
 
     Bridge.addItem = function(source, item, count, metadata, slot)
-        return exports.ox_inventory:AddItem(source, item, count or 1, metadata, slot) ~= false
+        return inventory:AddItem(source, item, count or 1, metadata, slot) ~= false
     end
 
     Bridge.removeItem = function(source, item, count, metadata, slot)
-        return exports.ox_inventory:RemoveItem(source, item, count or 1, metadata, slot) ~= false
+        return inventory:RemoveItem(source, item, count or 1, metadata, slot) ~= false
     end
 
     Bridge.clearInventory = function(source)
-        exports.ox_inventory:ClearInventory(source)
+        inventory:ClearInventory(source)
     end
 
     Bridge.registerUsableItem = function(item, cb)
-        exports.ox_inventory:RegisterUsableItem(item, function(source)
+        inventory:RegisterUsableItem(item, function(source)
             cb(source)
         end)
     end
 
     Bridge.openInventory = function(source)
-        TriggerClientEvent('ox_inventory:openInventory', source)
+        TriggerClientEvent(Config.Inventory .. ':openInventory', source)
     end
 
     Bridge.openInventoryFor = function(source, targetSource)
-        exports.ox_inventory:OpenInventory(source, { type = 'player', id = targetSource })
+        inventory:OpenInventory(source, { type = 'player', id = targetSource })
     end
 
 -- ─── qb-inventory ─────────────────────────────────────────────────────────────
@@ -340,4 +344,97 @@ else
     Bridge.registerUsableItem = function(item, cb) end
     Bridge.openInventory     = function(source) end
     Bridge.openInventoryFor  = function(source, targetSource) end
+end
+
+-- ─────────────────────────────────────────────────────────────────────────────
+--  ITEM DEFINITIONS
+--
+--  Bridge.getItemInfo(item)                  → { name, label, weight, description, image } | nil
+--  Bridge.canCarryItem(source, item, count, metadata) → bool
+--
+--  `image` is a full nui:// URL the UI can use directly.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+local function imageUrl(resource, item, custom)
+    if type(custom) == 'string' and custom ~= '' then
+        if custom:match('^[%w]+://') then return custom end
+        return ('nui://%s/web/images/%s'):format(resource, custom)
+    end
+    return ('nui://%s/web/images/%s.png'):format(resource, item)
+end
+
+if Config.Inventory == 'ox_inventory' or Config.Inventory == 'dg_inventory' then
+    local inventory = exports[Config.Inventory]
+    local imagePath = GetConvar('inventory:imagepath', ('nui://%s/web/images'):format(Config.Inventory))
+
+    Bridge.getItemInfo = function(item)
+        local data = inventory:Items(item)
+        if not data then return nil end
+
+        local image = data.client and data.client.image
+        if type(image) ~= 'string' or image == '' then
+            image = ('%s/%s.png'):format(imagePath, item)
+        elseif not image:match('^[%w]+://') then
+            image = ('%s/%s'):format(imagePath, image)
+        end
+
+        return {
+            name        = item,
+            label       = data.label or item,
+            weight      = data.weight or 0,
+            description = data.description,
+            image       = image,
+        }
+    end
+
+    Bridge.canCarryItem = function(source, item, count, metadata)
+        return inventory:CanCarryItem(source, item, count or 1, metadata) == true
+    end
+
+elseif Config.Inventory == 'qb-inventory' or Config.Inventory == 'ps-inventory' then
+    local QBCore = exports['qb-core']:GetCoreObject()
+    local resource = Config.Inventory
+
+    Bridge.getItemInfo = function(item)
+        local data = QBCore.Shared.Items[item]
+        if not data then return nil end
+
+        return {
+            name        = item,
+            label       = data.label or item,
+            weight      = data.weight or 0,
+            description = data.description,
+            image       = imageUrl(resource == 'ps-inventory' and 'ps-inventory' or 'qb-inventory', item, data.image),
+        }
+    end
+
+    Bridge.canCarryItem = function(source, item, count)
+        local ok, result = pcall(function()
+            return exports[resource]:CanAddItem(source, item, count or 1)
+        end)
+        if not ok then return true end
+        return result ~= false
+    end
+
+elseif Config.Inventory == 'esx' then
+    local ESX = exports['es_extended']:getSharedObject()
+
+    Bridge.getItemInfo = function(item)
+        local label = ESX.GetItemLabel(item)
+        if not label then return nil end
+
+        return { name = item, label = label, weight = 0, image = imageUrl('esx_inventoryhud', item) }
+    end
+
+    Bridge.canCarryItem = function(source, item, count)
+        local xPlayer = ESX.GetPlayerFromId(source)
+        if not xPlayer then return false end
+        return xPlayer.canCarryItem(item, count or 1)
+    end
+
+else
+    -- codem / origen / standalone: no reliable definition lookup, so callers
+    -- fall back to their own config.
+    Bridge.getItemInfo  = function() return nil end
+    Bridge.canCarryItem = function() return true end
 end
