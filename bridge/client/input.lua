@@ -30,7 +30,7 @@ if Config.Input == 'ox_lib' then
         local rows = {}
         for i, input in ipairs(data.inputs or {}) do
             rows[i] = {
-                type        = input.type        or 'input',
+                type        = (input.type == 'text' or not input.type) and 'input' or input.type,
                 label       = input.label       or '',
                 placeholder = input.placeholder or '',
                 required    = input.required    or false,
@@ -86,14 +86,10 @@ elseif Config.Input == 'qb-input' then
         end)
     end
 
--- ─── standalone (simple NUI-less prompt via chat suggestion — basic fallback) ─
+-- ─── standalone (no dialog) ───────────────────────────────────────────────────
+-- Shows nothing: every input resolves to its `default` (or '') and a warning is
+-- printed. Configure ox_lib or qb-input for real player input.
 else
-    --[[
-        True standalone input is difficult without NUI.
-        This fallback opens a sequence of keyboard inputs using the
-        FiveM native DISABLE_ALL_CONTROL_ACTIONS approach.
-        For a proper UI, replace this with your own NUI dialog.
-    ]]
     Bridge.showInput = function(data, cb)
         -- Warn server owners this is a basic fallback
         print('^3[dg-bridge] WARNING: No input resource configured. Using minimal standalone fallback.^0')

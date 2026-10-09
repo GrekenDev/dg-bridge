@@ -19,7 +19,6 @@ Config.Framework = 'qbox'
 --
 --  Options:
 --    'ox_inventory'    → ox_inventory  (overextended)
---    'dg_inventory'    → dg_inventory  (ox_inventory fork, same API)
 --    'qb-inventory'    → qb-inventory  (QBCore built-in)
 --    'ps-inventory'    → ps-inventory  (project sloth)
 --    'codem-inventory' → codem-inventory
@@ -27,7 +26,7 @@ Config.Framework = 'qbox'
 --    'esx'             → es_extended built-in inventory
 --    'standalone'      → No inventory — item functions return safe fallbacks
 -- ─────────────────────────────────────────────────────────────────────────────
-Config.Inventory = 'dg_inventory'
+Config.Inventory = 'ox_inventory'
 
 -- ─────────────────────────────────────────────────────────────────────────────
 --  NOTIFICATIONS
@@ -66,11 +65,11 @@ Config.Progress = 'ox_lib'
 --
 --  Options:
 --    'ox_lib'     → lib.showTextUI
---    'okok'       → okokNotify DrawText
+--    'okok'       → okokTextUI
 --    'qbcore'     → QBCore.Functions.DrawText
 --    'ps-ui'      → ps-ui DrawText
 --    'lation'     → lation_ui textUI
---    'standalone' → custom floating NUI (built-in fallback)
+--    'standalone' → 3D text drawn above the player (no extra resource)
 -- ─────────────────────────────────────────────────────────────────────────────
 Config.TextUI = 'ox_lib'
 
@@ -80,7 +79,7 @@ Config.TextUI = 'ox_lib'
 --  Options:
 --    'ox_lib'     → lib.inputDialog
 --    'qb-input'   → qb-input  (exports['qb-input']:ShowInput)
---    'standalone' → built-in NUI dialog (requires no extra resource)
+--    'standalone' → no dialog — returns each input's default value and prints a warning
 -- ─────────────────────────────────────────────────────────────────────────────
 Config.Input = 'ox_lib'
 
@@ -113,7 +112,7 @@ Config.RadialMenu = 'ox_lib'
 --    'qtarget'    → qtarget
 --    'standalone' → distance-based DrawText3D (no extra resource needed)
 -- ─────────────────────────────────────────────────────────────────────────────
-Config.Target = 'i_interaction'
+Config.Target = 'ox_target'
 
 -- ─────────────────────────────────────────────────────────────────────────────
 --  DISPATCH  (police/emergency alerts)
@@ -127,20 +126,22 @@ Config.Target = 'i_interaction'
 Config.Dispatch = 'ps-dispatch'
 
 -- ─────────────────────────────────────────────────────────────────────────────
---  MONEY ACCOUNT MAPPING
---  Maps your framework's internal account names to Bridge's canonical names.
+--  MONEY ACCOUNT MAPPING  (QBCore / QBox only)
+--  Maps Bridge's canonical account names to your framework's internal names.
 --  Only change if your server uses custom account/wallet names.
 --
 --  Canonical names used by Bridge: 'cash', 'bank', 'black'
+--
+--  Ignored by the other frameworks: ESX maps cash → money and
+--  black → black_money itself, and ND_Core passes names through unchanged.
 -- ─────────────────────────────────────────────────────────────────────────────
 Config.MoneyAccounts = {
     -- [canonical] = [framework internal name]
-    cash  = 'cash',   -- QBCore / QBox
+    cash  = 'cash',
     bank  = 'bank',
-    black = 'crypto', -- QBCore calls dirty money "crypto" by default
-    -- ESX uses: money, bank, black_money
-    -- ND uses:  cash, bank
+    black = 'crypto', -- QBCore / QBox call dirty money "crypto" by default
 }
+
 -- ─────────────────────────────────────────────────────────────────────────────
 --  SOCIETY MANAGEMENT
 --  If your server uses a society/boss-banking script for job finances, set it here.
@@ -159,12 +160,12 @@ Config.MoneyAccounts = {
 --  Want another script supported? Open a ticket or contribute a PR!
 -- ─────────────────────────────────────────────────────────────────────────────
 Config.SocietyManagement = 'Renewed-Banking'
+
 -- ─────────────────────────────────────────────────────────────────────────────
--- ─────────────────────────────────────────────────────────────────────────────
---  STANDALONE DISPATCH SETTINGS
---  Only used when Config.Dispatch = 'standalone'
---
---  Jobs in this list will receive a blip + notification when a dispatch fires.
+--  DISPATCH JOBS
+--  Default job list for dispatch alerts that don't pass their own `jobs`.
+--  Used by every Config.Dispatch backend; with 'standalone', online players
+--  with one of these jobs get the blip + notification.
 -- ─────────────────────────────────────────────────────────────────────────────
 Config.DispatchJobs = { 'police', 'sheriff', 'ambulance' }
 
@@ -176,19 +177,22 @@ Config.DispatchJobs = { 'police', 'sheriff', 'ambulance' }
 --    'ox_lib'     → ox_lib context menu fallback (multi-page via openContext)
 --    'standalone' → no-op (logs to console)
 -- ─────────────────────────────────────────────────────────────────────────────
-Config.NPCDialog = 'bl_dialog'
+Config.NPCDialog = 'ox_lib'
 
 -- ─────────────────────────────────────────────────────────────────────────────
 --  VEHICLE KEYS
 --  Which vehicle key script is installed on your server.
 --
 --  Options:
---    'qb-vehiclekeys'    → qb-vehiclekeys   (QBCore / QBox built-in)
---    'wasabi_carlock'    → wasabi_carlock   (Wasabi Scripts)
---    't1ger_keys'        → t1ger_keys       (t1ger)
---    'mono_keys'         → mono_keys        (Nox_Aeterna)
---    'codem-vehiclekeys' → codem-vehiclekeys (CodeM)
---    'standalone'        → SetVehicleDoorsLocked native (no extra resource)
+--    'qb-vehiclekeys'      → qb-vehiclekeys      (QBCore)
+--    'qbx_vehiclekeys'     → qbx_vehiclekeys     (QBox)
+--    'Renewed-vehiclekeys' → Renewed-vehiclekeys (Renewed)
+--    'mrnewbs_vehiclekeys' → mrnewbs_vehiclekeys (MrNewb)
+--    'wasabi_carlock'      → wasabi_carlock      (Wasabi Scripts)
+--    't1ger_keys'          → t1ger_keys          (t1ger)
+--    'mono_keys'           → mono_keys           (Nox_Aeterna)
+--    'codem-vehiclekeys'   → codem-vehiclekeys   (CodeM)
+--    'standalone'          → keys tracked in the bridge + SetVehicleDoorsLocked (no extra resource)
 -- ─────────────────────────────────────────────────────────────────────────────
 Config.VehicleKeys = 'qbx_vehiclekeys'
 
@@ -210,7 +214,8 @@ Config.Fuel = 'ox_fuel'
 --  Backend used by Bridge.log() for audit trails and economy logging.
 --
 --  Options:
---    'ox_lib'   → lib.logger  (routes to Loki / Datadog / Fivemanage via ox_lib config)
+--    'ox_lib'   → lib.logger  (Datadog / Fivemanage / Loki, picked with the ox:logger convar)
+--                 ox_lib must be started before dg-bridge, otherwise logging is disabled.
 --    'discord'  → Discord webhook  — requires Config.LoggingWebhook below
 --    'none'     → silent no-op
 -- ─────────────────────────────────────────────────────────────────────────────

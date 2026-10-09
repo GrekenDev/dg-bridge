@@ -14,17 +14,45 @@ local backend = Config.Logging
 
 -- ─── ox_lib ───────────────────────────────────────────────────────────────────
 -- lib.logger routes to whichever backend ox_lib is configured for
--- (Loki, Datadog, Fivemanage, etc.) — see ox_lib server config.
+-- (Loki, Datadog, Fivemanage) via the ox:logger convar — see ox_lib docs.
 if backend == 'ox_lib' then
-    local lib = rawget(_G, 'lib') ---@type table
 
-    Bridge.log = function(source, action, details, level)
-        local meta = details or {}
-        if source and source > 0 then
-            meta.source     = source
-            meta.playerName = GetPlayerName(source) or 'unknown'
+    -- lib.logger is an ox_lib import module, not an export, so it is only
+    -- reachable through @ox_lib/init.lua. It is loaded here instead of in the
+    -- manifest so servers without ox_lib can still run the bridge.
+    local function loadOxLib()
+        local chunk = LoadResourceFile('ox_lib', 'init.lua')
+        if not chunk then return nil, 'ox_lib/init.lua not found' end
+
+        local fn, err = load(chunk, '@@ox_lib/init.lua')
+        if not fn then return nil, err end
+
+        local ok, loadErr = pcall(fn)
+        if not ok then return nil, loadErr end
+
+        return rawget(_G, 'lib')
+    end
+
+    local lib, err = loadOxLib()
+
+    if not lib then
+        print(('^3[dg-bridge] Config.Logging = "ox_lib" but ox_lib could not be loaded (%s) — logging disabled.^0'):format(tostring(err)))
+        Bridge.log = function() end
+    else
+        Bridge.log = function(source, action, details, level)
+            local message = { action }
+            local tags    = { 'level:' .. (level or 'info') }
+
+            for key, value in pairs(details or {}) do
+                local text = tostring(value)
+                message[#message + 1] = ('%s=%s'):format(key, text)
+                -- ox_lib's providers split tags on ',' and ':'
+                tags[#tags + 1] = ('%s:%s'):format(key, (text:gsub('[,:]', ' ')))
+            end
+
+            -- ox_lib adds the player's name and identifiers itself when source > 0
+            lib.logger(source or 0, action, table.concat(message, ' '), table.unpack(tags))
         end
-        lib.logger(GetCurrentResourceName(), level or 'info', action, meta)
     end
 
 -- ─── discord ──────────────────────────────────────────────────────────────────

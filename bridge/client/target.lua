@@ -24,23 +24,28 @@
 
 -- ─── helpers ─────────────────────────────────────────────────────────────────
 
--- Convert { job='police' } or { job={'police','sheriff'} } to ox groups table
+local function addGroups(groups, value)
+    if type(value) == 'table' then
+        for _, name in ipairs(value) do groups[name] = 0 end
+    elseif value then
+        groups[value] = 0
+    end
+end
+
+-- Convert job/gang restrictions to an ox groups table, e.g. { police = 0, ballas = 0 }.
+-- ox groups match ANY listed group, so job + gang together means job OR gang.
 local function toOxGroups(opt)
-    if not opt.job then return nil end
+    if not opt.job and not opt.gang then return nil end
     local groups = {}
-    if type(opt.job) == 'table' then
-        for _, j in ipairs(opt.job) do groups[j] = 0 end
-    else
-        groups[opt.job] = 0
-    end
-    if opt.gang then
-        if type(opt.gang) == 'table' then
-            for _, g in ipairs(opt.gang) do groups[g] = 0 end
-        else
-            groups[opt.gang] = 0
-        end
-    end
+    addGroups(groups, opt.job)
+    addGroups(groups, opt.gang)
     return groups
+end
+
+-- Option names are derived from the label alone so removeEntityTarget can
+-- remove options by label.
+local function toOxName(label)
+    return (label:lower():gsub('%s+', '_'))
 end
 
 -- Build ox_target / i_interaction targets list from unified options
@@ -48,7 +53,7 @@ local function toOxTargets(options, distance)
     local targets = {}
     for i, opt in ipairs(options) do
         targets[i] = {
-            name        = opt.label:lower():gsub('%s+', '_') .. '_' .. i,
+            name        = toOxName(opt.label),
             label       = opt.label,
             icon        = opt.icon,
             distance    = opt.distance or distance or 2.5,
@@ -151,6 +156,12 @@ if Config.Target == 'ox_target' or Config.Target == 'i_interaction' then
     Bridge.removeEntityTarget = function(entity, names)
         if type(names) == 'string' then names = { names } end
 
+        if names then
+            local oxNames = {}
+            for i, label in ipairs(names) do oxNames[i] = toOxName(label) end
+            names = oxNames
+        end
+
         local netId = netIdOf(entity)
         if netId then
             target:removeEntity(netId, names)
@@ -197,7 +208,7 @@ elseif Config.Target == 'qb-target' then
     end
 
     Bridge.removeEntityTarget = function(entity, names)
-        exports['qb-target']:RemoveTargetEntity(entity)
+        exports['qb-target']:RemoveTargetEntity(entity, names)
     end
 
 -- ─── qtarget ─────────────────────────────────────────────────────────────────
@@ -238,7 +249,7 @@ elseif Config.Target == 'qtarget' then
     end
 
     Bridge.removeEntityTarget = function(entity, names)
-        exports['qtarget']:RemoveTargetEntity(entity)
+        exports['qtarget']:RemoveTargetEntity(entity, names)
     end
 
 -- ─── standalone (distance-check DrawText3D) ───────────────────────────────────

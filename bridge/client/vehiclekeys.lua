@@ -266,11 +266,11 @@ else
     -- Server-side give/remove relay via dg-bridge:vehiclekeys client events.
     local _ownedPlates = {}
 
-    AddEventHandler('dg-bridge:vehiclekeys:give', function(plate)
+    RegisterNetEvent('dg-bridge:vehiclekeys:give', function(plate)
         if plate then _ownedPlates[plate] = true end
     end)
 
-    AddEventHandler('dg-bridge:vehiclekeys:remove', function(plate)
+    RegisterNetEvent('dg-bridge:vehiclekeys:remove', function(plate)
         if plate then _ownedPlates[plate] = nil end
     end)
 

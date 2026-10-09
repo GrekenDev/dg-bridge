@@ -143,12 +143,9 @@ if Config.Framework == 'esx' then
         if p then p.setJob(job, grade) end
     end
 
+    -- ESX.GetPlayers() returns server ids (not xPlayers) in every ESX version.
     Bridge.getPlayers = function()
-        local players = {}
-        for _, xPlayer in ipairs(ESX.GetPlayers()) do
-            players[#players + 1] = xPlayer.source
-        end
-        return players
+        return ESX.GetPlayers()
     end
 
 -- ─── QBCore ───────────────────────────────────────────────────────────────────
@@ -616,12 +613,8 @@ elseif Config.Framework == 'esx' then
     local _ESX2 = exports['es_extended']:getSharedObject()
 
     Bridge.getPlayerByIdentifier = function(identifier)
-        for _, xPlayer in ipairs(_ESX2.GetPlayers()) do
-            if xPlayer.identifier == identifier then
-                return Bridge.getPlayer(xPlayer.source)
-            end
-        end
-        return nil
+        local xPlayer = _ESX2.GetPlayerFromIdentifier(identifier)
+        return xPlayer and Bridge.getPlayer(xPlayer.source) or nil
     end
 
 elseif Config.Framework == 'nd' then

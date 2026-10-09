@@ -30,7 +30,7 @@ if Config.TextUI == 'ox_lib' then
         return exports.ox_lib:isTextUIOpen()
     end
 
--- ─── okokNotify DrawText ──────────────────────────────────────────────────────
+-- ─── okokTextUI ───────────────────────────────────────────────────────────────
 elseif Config.TextUI == 'okok' then
     local _open = false
 
